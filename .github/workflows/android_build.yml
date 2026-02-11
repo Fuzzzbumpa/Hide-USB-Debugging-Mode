@@ -10,34 +10,46 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 1. 拉取代码
+      # 1. 拉取代码
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: 2. 设置 Java 环境 (必须是 Java 8)
+      # 2. 设置 Java 8 环境 (老项目必须用 8)
+      - name: Setup Java 8
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '8'
 
-      - name: 3. 🚑【关键修复】清理不兼容的高版本 Build Tools
+      # 3. 【核心修复】暴力清理高版本 Android SDK
+      # 你的老 Gradle 插件读到 API 30+ 的配置文件会直接崩溃
+      # 这里我们把它们全部删掉，只留下旧版环境
+      - name: Cleanup Android SDK
         run: |
-          echo "正在清理导致崩溃的新版 Build Tools..."
-          # 你的老项目无法识别 30.0.0 以上的版本，直接删掉它们
-          rm -rf $ANDROID_HOME/build-tools/34*
-          rm -rf $ANDROID_HOME/build-tools/35*
-          rm -rf $ANDROID_HOME/build-tools/36*
-          echo "清理完成，剩余版本："
+          echo "正在清理导致崩溃的高版本 SDK..."
+          export ANDROID_HOME=$ANDROID_SDK_ROOT
+          
+          # 删除高版本 Build Tools (30.0.0 以上都会导致 NumberFormatException)
+          rm -rf $ANDROID_HOME/build-tools/3[0-9]*
+          
+          # 删除高版本 Android 平台 (API 30 以上会导致 XML 解析错误)
+          rm -rf $ANDROID_HOME/platforms/android-3[0-9]*
+          
+          echo "清理完成！剩余环境："
           ls $ANDROID_HOME/build-tools/
+          ls $ANDROID_HOME/platforms/
 
-      - name: 4. 赋予 gradlew 执行权限
+      # 4. 赋予 gradlew 执行权限
+      - name: Grant Execute Permission
         run: chmod +x gradlew
 
-      - name: 5. 执行编译命令
+      # 5. 执行编译 (加上 stacktrace 以便出错时看详情)
+      - name: Build Debug APK
         run: ./gradlew assembleDebug --stacktrace
-        # 加上 --stacktrace 可以让我们在出错时看到更详细的信息
 
-      - name: 6. 上传生成的 APK
+      # 6. 上传生成的 APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: my-android-apk
+          name: my-old-android-app
           path: app/build/outputs/apk/debug/*.apk
