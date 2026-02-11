@@ -2,8 +2,8 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ "main", "master" ] # 无论你的主分支叫什么，推送时都会触发
-  workflow_dispatch: # 允许你手动点击按钮触发
+    branches: [ "main", "master" ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -13,19 +13,30 @@ jobs:
       - name: 1. 拉取代码
         uses: actions/checkout@v4
 
-      - name: 2. 设置 Java 环境
+      - name: 2. 设置 Java 环境 (必须是 Java 8)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '8' # 如果报错，可以尝试改为 '11' 或 '8'，因为你的项目较老
+          java-version: '8'
 
-      - name: 3. 赋予 gradlew 执行权限
+      - name: 3. 🚑【关键修复】清理不兼容的高版本 Build Tools
+        run: |
+          echo "正在清理导致崩溃的新版 Build Tools..."
+          # 你的老项目无法识别 30.0.0 以上的版本，直接删掉它们
+          rm -rf $ANDROID_HOME/build-tools/34*
+          rm -rf $ANDROID_HOME/build-tools/35*
+          rm -rf $ANDROID_HOME/build-tools/36*
+          echo "清理完成，剩余版本："
+          ls $ANDROID_HOME/build-tools/
+
+      - name: 4. 赋予 gradlew 执行权限
         run: chmod +x gradlew
 
-      - name: 4. 执行编译命令 (Debug 版)
-        run: ./gradlew assembleDebug
+      - name: 5. 执行编译命令
+        run: ./gradlew assembleDebug --stacktrace
+        # 加上 --stacktrace 可以让我们在出错时看到更详细的信息
 
-      - name: 5. 上传生成的 APK
+      - name: 6. 上传生成的 APK
         uses: actions/upload-artifact@v4
         with:
           name: my-android-apk
