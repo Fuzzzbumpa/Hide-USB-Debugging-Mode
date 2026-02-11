@@ -17,7 +17,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17' # 如果报错，可以尝试改为 '11' 或 '8'，因为你的项目较老
+          java-version: '8' # 如果报错，可以尝试改为 '11' 或 '8'，因为你的项目较老
 
       - name: 3. 赋予 gradlew 执行权限
         run: chmod +x gradlew
